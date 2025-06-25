@@ -1,7 +1,8 @@
 streamlit
 librosa
-keras
+keras>=3.0.0
 joblib
-numpy<2.0
+numpy
 scipy
 scikit-learn
+soundfile
