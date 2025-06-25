@@ -113,17 +113,17 @@ def main():
         layout="centered"
     )
     
-    st.title("🎵 Audio Emotion Classifier")
+    st.title("Audio Emotion Classifier")
     st.write("Upload an audio file to classify the emotion expressed in speech")
     
-    st.subheader("📁 Upload Audio File")
+    st.subheader("Upload Audio File")
     uploaded_file = st.file_uploader(
         "Choose an audio file",
         type=['wav', 'mp3', 'flac', 'm4a'],
         help="Supported formats: WAV, MP3, FLAC, M4A"
     )
     
-    st.subheader("🎯 Predicted Emotion")
+    st.subheader("Predicted Emotion")
     
     if uploaded_file is not None:
         with st.spinner("Analyzing audio..."):
@@ -156,7 +156,7 @@ def main():
                 st.error("Failed to classify the audio. Please try with a different file.")
     
     else:
-        st.info("👆 Please upload an audio file to get started")
+        st.info("Please upload an audio file to get started")
     
 
 
