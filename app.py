@@ -1,11 +1,22 @@
 import streamlit as st
 import numpy as np
 import librosa
-import tensorflow as tf
 import joblib
 import tempfile
 import os
 from io import BytesIO
+
+# Try different TensorFlow imports
+try:
+    import tensorflow as tf
+    TF_AVAILABLE = True
+except ImportError:
+    try:
+        import keras
+        TF_AVAILABLE = True
+    except ImportError:
+        TF_AVAILABLE = False
+        st.error("TensorFlow/Keras not available. Please check your requirements.txt")
 
 # Configuration constants
 SAMPLING_RATE = 16000
@@ -77,9 +88,18 @@ def extract_features_fast(x, sr):
 @st.cache_resource
 def load_model_and_scaler():
     """Load the trained model and scaler"""
+    if not TF_AVAILABLE:
+        st.error("TensorFlow/Keras is not available. Cannot load model.")
+        return None, None
+        
     try:
-        # You'll need to update these paths to where your model and scaler are saved
-        model = tf.keras.models.load_model('best_model_corrected.h5')
+        # Try TensorFlow first, then Keras
+        try:
+            model = tf.keras.models.load_model('best_model_corrected.h5')
+        except:
+            import keras
+            model = keras.models.load_model('best_model_corrected.h5')
+            
         scaler = joblib.load('scaler_.joblib')
         return model, scaler
     except Exception as e:
@@ -89,6 +109,10 @@ def load_model_and_scaler():
 
 def predict_emotion(audio_file):
     """Predict emotion from audio file"""
+    if not TF_AVAILABLE:
+        st.error("TensorFlow/Keras is not available. Cannot make predictions.")
+        return None, None
+        
     # Load model and scaler
     model, scaler = load_model_and_scaler()
     if model is None or scaler is None:
@@ -138,6 +162,11 @@ def main():
     
     st.title("🎵 Audio Emotion Classifier")
     st.write("Upload an audio file to classify the emotion expressed in speech")
+    
+    # Check if TensorFlow is available
+    if not TF_AVAILABLE:
+        st.error("⚠️ TensorFlow/Keras is not available. Please check your deployment configuration.")
+        st.stop()
     
     # File upload section
     st.subheader("📁 Upload Audio File")
