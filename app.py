@@ -7,7 +7,7 @@ import tempfile
 import os
 from io import BytesIO
 
-# Configuration constants
+
 SAMPLING_RATE = 16000
 N_MFCC = 13  
 N_MELS = 48  
@@ -15,11 +15,10 @@ HOP_LENGTH = 512
 N_FFT = 1024  
 DURATION = 3.5
 
-# Emotion labels
+
 EMOTION_LABELS = ['Neutral', 'Calm', 'Happy', 'Angry', 'Fearful', 'Disgust', 'Surprised']
 
 def load_preprocess(file_path, sr=SAMPLING_RATE, duration=DURATION):
-    """Load and preprocess audio file"""
     try:
         x, _ = librosa.load(file_path, sr=sr, duration=duration, offset=0.2)
         x, _ = librosa.effects.trim(x, top_db=30)
@@ -40,24 +39,16 @@ def load_preprocess(file_path, sr=SAMPLING_RATE, duration=DURATION):
         return None
 
 def extract_features_fast(x, sr):
-    """Extract audio features"""
     features = []
-    
-    # MFCC features
     mfccs = librosa.feature.mfcc(y=x, sr=sr, n_mfcc=N_MFCC, hop_length=HOP_LENGTH, n_fft=N_FFT)
     features.extend(np.mean(mfccs.T, axis=0))
     features.extend(np.std(mfccs.T, axis=0))    
-
-    # MFCC Delta
     mfcc_delta = librosa.feature.delta(mfccs)
     features.extend(np.mean(mfcc_delta.T, axis=0))
-    
-    # Mel Spectrogram
+
     mel_spec = librosa.feature.melspectrogram(y=x, sr=sr, n_mels=N_MELS, hop_length=HOP_LENGTH, n_fft=N_FFT)
     mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
     features.extend(np.mean(mel_spec_db.T, axis=0))
-    
-    # Spectral features
     spectral_centroids = librosa.feature.spectral_centroid(y=x, sr=sr, hop_length=HOP_LENGTH)[0]
     spectral_rolloff = librosa.feature.spectral_rolloff(y=x, sr=sr, hop_length=HOP_LENGTH)[0]
     zero_crossing_rate = librosa.feature.zero_crossing_rate(x, hop_length=HOP_LENGTH)[0]
@@ -68,7 +59,6 @@ def extract_features_fast(x, sr):
         np.mean(zero_crossing_rate), np.std(zero_crossing_rate)
     ])
 
-    # Chroma features
     chroma = librosa.feature.chroma_stft(y=x, sr=sr, hop_length=HOP_LENGTH, n_fft=N_FFT)
     features.extend(np.mean(chroma.T, axis=0))
     
@@ -76,54 +66,41 @@ def extract_features_fast(x, sr):
 
 @st.cache_resource
 def load_model_and_scaler():
-    """Load the trained model and scaler"""
     try:
-        # You'll need to update these paths to where your model and scaler are saved
         model = tf.keras.models.load_model('best_model_corrected.h5')
         scaler = joblib.load('scaler_.joblib')
         return model, scaler
     except Exception as e:
         st.error(f"Error loading model or scaler: {e}")
-        st.error("Please ensure 'best_model_corrected.h5' and 'scaler_.joblib' are in the same directory as this script.")
         return None, None
 
 def predict_emotion(audio_file):
-    """Predict emotion from audio file"""
-    # Load model and scaler
     model, scaler = load_model_and_scaler()
     if model is None or scaler is None:
         return None, None
-    
-    # Save uploaded file temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
         tmp_file.write(audio_file.read())
         tmp_file_path = tmp_file.name
     
     try:
-        # Process audio file
         audio_data = load_preprocess(tmp_file_path)
         if audio_data is None:
             return None, None
         
-        # Extract features
         features = extract_features_fast(audio_data, SAMPLING_RATE)
-        features = features.reshape(1, -1)  # Reshape for single prediction
+        features = features.reshape(1, -1)
         
-        # Scale features
         features_scaled = scaler.transform(features)
         
-        # Make prediction
         prediction = model.predict(features_scaled)
         predicted_class = np.argmax(prediction[0])
         confidence = np.max(prediction[0])
         
-        # Clean up temporary file
         os.unlink(tmp_file_path)
         
         return predicted_class, confidence
         
     except Exception as e:
-        # Clean up temporary file in case of error
         if os.path.exists(tmp_file_path):
             os.unlink(tmp_file_path)
         st.error(f"Error processing audio: {e}")
@@ -139,7 +116,6 @@ def main():
     st.title("🎵 Audio Emotion Classifier")
     st.write("Upload an audio file to classify the emotion expressed in speech")
     
-    # File upload section
     st.subheader("📁 Upload Audio File")
     uploaded_file = st.file_uploader(
         "Choose an audio file",
@@ -147,25 +123,21 @@ def main():
         help="Supported formats: WAV, MP3, FLAC, M4A"
     )
     
-    # Prediction section
     st.subheader("🎯 Predicted Emotion")
     
     if uploaded_file is not None:
-        # Auto-predict when file is uploaded
         with st.spinner("Analyzing audio..."):
             predicted_class, confidence = predict_emotion(uploaded_file)
             
             if predicted_class is not None:
                 emotion = EMOTION_LABELS[predicted_class]
                 
-                # Display results
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("Predicted Emotion", emotion)
                 with col2:
                     st.metric("Confidence", f"{confidence:.2%}")
                 
-                # Visual feedback based on emotion
                 emotion_colors = {
                     'Neutral': '🟢',
                     'Calm': '🔵', 
@@ -178,7 +150,6 @@ def main():
                 
                 st.success(f"{emotion_colors.get(emotion, '⚪')} The detected emotion is: **{emotion}**")
                 
-                # Confidence bar
                 st.progress(float(confidence))
                 
             else:
@@ -187,16 +158,7 @@ def main():
     else:
         st.info("👆 Please upload an audio file to get started")
     
-    # Footer
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style='text-align: center'>
-            <p>Built with Streamlit • Powered by TensorFlow and Librosa</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+
 
 if __name__ == "__main__":
     main()
