@@ -1,8 +1,7 @@
 streamlit
 librosa
-tensorflow
-scikit-learn
+keras
 joblib
-numpy
-pandas
-soundfile
+numpy<2.0
+scipy
+scikit-learn
