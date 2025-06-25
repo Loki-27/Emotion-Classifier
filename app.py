@@ -8,15 +8,18 @@ from io import BytesIO
 
 # Try different TensorFlow imports
 try:
-    import tensorflow as tf
+    import keras
     TF_AVAILABLE = True
+    BACKEND = "keras"
 except ImportError:
     try:
-        import keras
+        import tensorflow as tf
         TF_AVAILABLE = True
+        BACKEND = "tensorflow"
     except ImportError:
         TF_AVAILABLE = False
-        st.error("TensorFlow/Keras not available. Please check your requirements.txt")
+        BACKEND = None
+        st.error("Neither Keras nor TensorFlow available. Please check your requirements.txt")
 
 # Configuration constants
 SAMPLING_RATE = 16000
@@ -89,18 +92,18 @@ def extract_features_fast(x, sr):
 def load_model_and_scaler():
     """Load the trained model and scaler"""
     if not TF_AVAILABLE:
-        st.error("TensorFlow/Keras is not available. Cannot load model.")
+        st.error("Keras/TensorFlow is not available. Cannot load model.")
         return None, None
         
     try:
-        # Try TensorFlow first, then Keras
-        try:
-            model = tf.keras.models.load_model('best_model_corrected.h5')
-        except:
-            import keras
+        # Try Keras first (for newer versions), then TensorFlow
+        if BACKEND == "keras":
             model = keras.models.load_model('best_model_corrected.h5')
+        else:
+            model = tf.keras.models.load_model('best_model_corrected.h5')
             
         scaler = joblib.load('scaler_.joblib')
+        st.success(f"✅ Model loaded successfully using {BACKEND}")
         return model, scaler
     except Exception as e:
         st.error(f"Error loading model or scaler: {e}")
@@ -165,7 +168,8 @@ def main():
     
     # Check if TensorFlow is available
     if not TF_AVAILABLE:
-        st.error("⚠️ TensorFlow/Keras is not available. Please check your deployment configuration.")
+        st.error("⚠️ Keras/TensorFlow is not available. Please check your deployment configuration.")
+        st.info("💡 Using Keras 3.0 which should work with Python 3.13")
         st.stop()
     
     # File upload section
