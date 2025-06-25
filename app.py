@@ -6,6 +6,10 @@ import tempfile
 import os
 from io import BytesIO
 
+import sys
+import streamlit as st
+
+st.write(f"Python version: {sys.version}")
 # Try different TensorFlow imports
 try:
     import keras
