@@ -1,29 +1,11 @@
 import streamlit as st
 import numpy as np
 import librosa
+import tensorflow as tf
 import joblib
 import tempfile
 import os
 from io import BytesIO
-
-import sys
-import streamlit as st
-
-st.write(f"Python version: {sys.version}")
-# Try different TensorFlow imports
-try:
-    import keras
-    TF_AVAILABLE = True
-    BACKEND = "keras"
-except ImportError:
-    try:
-        import tensorflow as tf
-        TF_AVAILABLE = True
-        BACKEND = "tensorflow"
-    except ImportError:
-        TF_AVAILABLE = False
-        BACKEND = None
-        st.error("Neither Keras nor TensorFlow available. Please check your requirements.txt")
 
 # Configuration constants
 SAMPLING_RATE = 16000
@@ -95,19 +77,10 @@ def extract_features_fast(x, sr):
 @st.cache_resource
 def load_model_and_scaler():
     """Load the trained model and scaler"""
-    if not TF_AVAILABLE:
-        st.error("Keras/TensorFlow is not available. Cannot load model.")
-        return None, None
-        
     try:
-        # Try Keras first (for newer versions), then TensorFlow
-        if BACKEND == "keras":
-            model = keras.models.load_model('best_model_corrected.h5')
-        else:
-            model = tf.keras.models.load_model('best_model_corrected.h5')
-            
+        # You'll need to update these paths to where your model and scaler are saved
+        model = tf.keras.models.load_model('best_model_corrected.h5')
         scaler = joblib.load('scaler_.joblib')
-        st.success(f"✅ Model loaded successfully using {BACKEND}")
         return model, scaler
     except Exception as e:
         st.error(f"Error loading model or scaler: {e}")
@@ -116,10 +89,6 @@ def load_model_and_scaler():
 
 def predict_emotion(audio_file):
     """Predict emotion from audio file"""
-    if not TF_AVAILABLE:
-        st.error("TensorFlow/Keras is not available. Cannot make predictions.")
-        return None, None
-        
     # Load model and scaler
     model, scaler = load_model_and_scaler()
     if model is None or scaler is None:
@@ -169,12 +138,6 @@ def main():
     
     st.title("🎵 Audio Emotion Classifier")
     st.write("Upload an audio file to classify the emotion expressed in speech")
-    
-    # Check if TensorFlow is available
-    if not TF_AVAILABLE:
-        st.error("⚠️ Keras/TensorFlow is not available. Please check your deployment configuration.")
-        st.info("💡 Using Keras 3.0 which should work with Python 3.13")
-        st.stop()
     
     # File upload section
     st.subheader("📁 Upload Audio File")
